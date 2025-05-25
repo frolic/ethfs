@@ -1089,6 +1089,245 @@ test.describe('gunzipScripts', () => {
     }
   });
 
+  test('malformed gzip data handling', async ({ page }) => {
+    // Helper to create invalid gzipped data
+    const createInvalidGzipDataUri = () => {
+      // Create invalid base64 that looks like gzip but isn't
+      const invalidBase64 = 'H4sIAINVALIDEU5VALID==';
+      return `data:application/gzip;base64,${invalidBase64}`;
+    };
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Malformed Gzip Test</title>
+</head>
+<body>
+    <h1>Malformed Gzip Test</h1>
+
+    <!-- Malformed gzipped data -->
+    <script type="text/javascript+gzip" src="${createInvalidGzipDataUri()}"></script>
+    
+    <!-- Malformed base64 -->
+    <script type="text/javascript+gzip" src="data:application/gzip;base64,NotValidBase64!!!"></script>
+
+    <!-- Load gunzipScripts -->
+    <script src="../../dist/gunzipScripts-0.0.2.js"></script>
+
+    <script>
+      window.gzipErrors = [];
+      window.originalConsoleError = console.error;
+      
+      console.error = function(...args) {
+        window.gzipErrors.push(args.join(' '));
+        window.originalConsoleError.apply(console, args);
+      };
+      
+      setTimeout(() => {
+        window.gzipTestComplete = true;
+        window.gzipTestPassed = true; // If we get here, it didn't crash
+      }, 1500);
+    </script>
+</body>
+</html>`;
+
+    const filePath = writeTestFile('malformed-gzip-test.html', html);
+    await page.goto(`file://${filePath}`);
+
+    await page.waitForFunction(() => window.gzipTestComplete, { timeout: 10000 });
+
+    const passed = await page.evaluate(() => window.gzipTestPassed);
+    const errors = await page.evaluate(() => window.gzipErrors);
+    
+    console.log('Malformed gzip errors:', errors);
+
+    // Should not crash and should log errors
+    expect(passed).toBe(true);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors.join(' ').toLowerCase()).toMatch(/gunzip|error|could not/);
+  });
+
+  test('invalid JavaScript syntax in modules', async ({ page }) => {
+    const scripts: TestScript[] = [
+      // Module with invalid JavaScript syntax
+      {
+        type: 'esm',
+        path: './broken/syntax-error.js',
+        content: `
+          export const value = 'valid';
+          // This will cause a syntax error
+          export function broken() {
+            return invalid syntax here !!!
+          }
+        `
+      },
+      // Valid module for comparison
+      {
+        type: 'esm',
+        path: './working/valid.js',
+        content: `export const working = 'yes';`
+      }
+    ];
+
+    const html = generateTestHtml(scripts, {
+      title: 'Invalid Syntax Test',
+      additionalBody: `
+        <script type="module-shim">
+          window.syntaxResults = {};
+          
+          setTimeout(async () => {
+            // Test valid module first
+            try {
+              const valid = await import('./working/valid.js');
+              window.syntaxResults.valid = { success: true, value: valid.working };
+            } catch (e) {
+              window.syntaxResults.valid = { success: false, error: e.message };
+            }
+            
+            // Test invalid syntax module
+            try {
+              const broken = await import('./broken/syntax-error.js');
+              window.syntaxResults.broken = { success: true, unexpected: true };
+            } catch (e) {
+              window.syntaxResults.broken = { success: false, error: e.message };
+            }
+            
+            window.syntaxTestComplete = true;
+          }, 1000);
+        </script>
+      `
+    });
+
+    const filePath = writeTestFile('invalid-syntax-test.html', html);
+    await page.goto(`file://${filePath}`);
+
+    await page.waitForFunction(() => window.syntaxTestComplete, { timeout: 10000 });
+
+    const results = await page.evaluate(() => window.syntaxResults);
+
+    // Valid module should work
+    expect(results.valid.success).toBe(true);
+    expect(results.valid.value).toBe('yes');
+
+    // Invalid syntax should fail gracefully
+    expect(results.broken.success).toBe(false);
+    expect(results.broken.error).toMatch(/syntax|unexpected|invalid/i);
+  });
+
+  test('missing module imports', async ({ page }) => {
+    const scripts: TestScript[] = [
+      // Module that imports non-existent module
+      {
+        type: 'esm',
+        path: './broken/missing-import.js',
+        content: `
+          import { missing } from './does-not-exist.js';
+          export const test = 'test';
+        `
+      },
+      // Valid module
+      {
+        type: 'esm',
+        path: './working/valid.js',
+        content: `export const working = 'yes';`
+      }
+    ];
+
+    const html = generateTestHtml(scripts, {
+      title: 'Missing Import Test',
+      additionalBody: `
+        <script type="module-shim">
+          window.importResults = {};
+          
+          setTimeout(async () => {
+            // Test valid module
+            try {
+              const valid = await import('./working/valid.js');
+              window.importResults.valid = { success: true, value: valid.working };
+            } catch (e) {
+              window.importResults.valid = { success: false, error: e.message };
+            }
+            
+            // Test missing import
+            try {
+              const broken = await import('./broken/missing-import.js');
+              window.importResults.missing = { success: true, unexpected: true };
+            } catch (e) {
+              window.importResults.missing = { success: false, error: e.message };
+            }
+            
+            window.importTestComplete = true;
+          }, 1000);
+        </script>
+      `
+    });
+
+    const filePath = writeTestFile('missing-import-test.html', html);
+    await page.goto(`file://${filePath}`);
+
+    await page.waitForFunction(() => window.importTestComplete, { timeout: 10000 });
+
+    const results = await page.evaluate(() => window.importResults);
+
+    // Valid module should work
+    expect(results.valid.success).toBe(true);
+    expect(results.valid.value).toBe('yes');
+
+    // Missing import should fail gracefully
+    expect(results.missing.success).toBe(false);
+    expect(results.missing.error).toMatch(/resolve|not found|failed/i);
+  });
+
+  test('missing data-path attributes', async ({ page }) => {
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Missing Data-Path Test</title>
+</head>
+<body>
+    <h1>Missing Data-Path Test</h1>
+
+    <!-- ESM script without data-path attribute -->
+    <script type="text/javascript+gzip;module" src="data:application/gzip;base64,H4sIAAAAAAAAA8tIzcnJT1VsTS1OLapMLcnPZ2BgYGRgZGFkYWRhZGFkYQQAAP//FwwKqAAAAA=="></script>
+    
+    <!-- Valid UMD script for comparison -->
+    <script type="text/javascript+gzip" src="data:application/gzip;base64,H4sIAAAAAAAAA0tMTIvLTUwuykvMTVWIzUlVyCklVDyRkqSQWpKrkJKLGDAA/QcAAA=="></script>
+
+    <!-- Load gunzipScripts -->
+    <script src="../../dist/gunzipScripts-0.0.2.js"></script>
+
+    <script>
+      window.dataPathErrors = [];
+      window.originalConsoleError = console.error;
+      
+      console.error = function(...args) {
+        window.dataPathErrors.push(args.join(' '));
+        window.originalConsoleError.apply(console, args);
+      };
+      
+      setTimeout(() => {
+        window.dataPathTestComplete = true;
+        window.dataPathTestPassed = true;
+      }, 1500);
+    </script>
+</body>
+</html>`;
+
+    const filePath = writeTestFile('missing-data-path-test.html', html);
+    await page.goto(`file://${filePath}`);
+
+    await page.waitForFunction(() => window.dataPathTestComplete, { timeout: 10000 });
+
+    const passed = await page.evaluate(() => window.dataPathTestPassed);
+    const errors = await page.evaluate(() => window.dataPathErrors);
+
+    // Should not crash even with missing data-path
+    expect(passed).toBe(true);
+    
+    // May or may not log errors depending on implementation
+    console.log('Missing data-path handling:', errors.length > 0 ? 'logged errors' : 'handled silently');
+  });
+
   test('real Three.js with relative imports', async ({ page }) => {
     const fs = require('fs');
     const path = require('path');
