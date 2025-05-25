@@ -96,12 +96,6 @@ async function rewriteImports(content: string, moduleUrl: string, importMap: Rec
           }
           break;
         }
-        // Also check if the filename matches
-        const fileName = resolvedUrl.split('/').pop();
-        if (key === fileName || key === './' + fileName) {
-          finalUrl = fileName; // Use just the filename as absolute specifier
-          break;
-        }
       }
       
       // Always rewrite relative imports to absolute specifiers
@@ -126,7 +120,7 @@ const gunzipScripts = async () => {
   );
 
   const modules: ModuleInfo[] = [];
-  const importMap: { imports: Record<string, string>; scopes?: Record<string, Record<string, string>> } = { imports: {}, scopes: {} };
+  const importMap: { imports: Record<string, string> } = { imports: {} };
 
   const processScript = (script: HTMLScriptElement, isESM: boolean): ModuleInfo | null => {
     try {
