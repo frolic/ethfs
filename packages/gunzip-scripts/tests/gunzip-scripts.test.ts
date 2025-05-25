@@ -546,6 +546,104 @@ test.describe('gunzipScripts', () => {
     }
   });
 
+  test('extreme relative path traversal', async ({ page }) => {
+    const scripts: TestScript[] = [
+      // Deep nested file
+      {
+        type: 'esm',
+        path: './deep/nested/very/deep/module.js',
+        content: `
+          export const deepValue = 'deep';
+        `
+      },
+      // Very deep nested file that tries extreme traversal  
+      {
+        type: 'esm',
+        path: './very/very/very/very/very/very/very/very/very/very/very/very/deep/consumer.js',
+        content: `
+          // This should either resolve properly or fail gracefully
+          import { deepValue } from '../../../../../../../../../../../deep/nested/very/deep/module.js';
+          
+          window.extremeTraversalTest = {
+            success: true,
+            deepValue: deepValue
+          };
+          window.extremeTraversalComplete = true;
+        `
+      },
+      // Root level file for comparison
+      {
+        type: 'esm',
+        path: './root.js',
+        content: `
+          export const rootValue = 'root';
+        `
+      },
+      // Test normal traversal too
+      {
+        type: 'esm',
+        path: './normal/test.js',
+        content: `
+          import { rootValue } from '../root.js';
+          
+          window.normalTraversalTest = {
+            success: true,
+            rootValue: rootValue
+          };
+        `
+      }
+    ];
+
+    const html = generateTestHtml(scripts, {
+      title: 'Extreme Relative Path Test',
+      additionalBody: `
+        <script type="module-shim">
+          setTimeout(async () => {
+            try {
+              // Test normal traversal first
+              await import('./normal/test.js');
+              
+              // Test extreme traversal
+              await import('./very/very/very/very/very/very/very/very/very/very/very/very/deep/consumer.js');
+              
+              window.allTraversalTestsComplete = true;
+            } catch (e) {
+              window.traversalTestError = e.message;
+              window.allTraversalTestsComplete = true;
+            }
+          }, 1000);
+        </script>
+      `
+    });
+
+    const filePath = writeTestFile('extreme-traversal-test.html', html);
+    await page.goto(`file://${filePath}`);
+
+    await page.waitForFunction(() => window.allTraversalTestsComplete, { timeout: 10000 });
+
+    const error = await page.evaluate(() => window.traversalTestError);
+    const normalResult = await page.evaluate(() => window.normalTraversalTest);
+    const extremeResult = await page.evaluate(() => window.extremeTraversalTest);
+
+    // Normal traversal should work
+    expect(normalResult).toEqual({
+      success: true,
+      rootValue: 'root'
+    });
+
+    if (error) {
+      // If extreme traversal fails, that's acceptable - log what happened
+      console.log('Extreme traversal failed (this may be expected):', error);
+      expect(error).toMatch(/Failed to resolve|Unable to resolve|Invalid/);
+    } else {
+      // If it succeeds, verify it worked correctly
+      expect(extremeResult).toEqual({
+        success: true,
+        deepValue: 'deep'
+      });
+    }
+  });
+
   test('real Three.js with relative imports', async ({ page }) => {
     const fs = require('fs');
     const path = require('path');
