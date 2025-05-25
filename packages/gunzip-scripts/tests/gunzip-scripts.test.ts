@@ -1640,4 +1640,189 @@ test.describe('gunzipScripts', () => {
     }
   });
 
+  test('import/export syntax edge cases', async ({ page }) => {
+    const scripts: TestScript[] = [
+      // Empty module with default export
+      {
+        type: 'esm',
+        path: './modules/empty.js',
+        content: `
+          // This module is intentionally empty but exports a default
+          export default null;
+        `
+      },
+      // Module with only side effects
+      {
+        type: 'esm', 
+        path: './modules/side-effects.js',
+        content: `
+          console.log('Side effect executed');
+          window.sideEffectRan = true;
+        `
+      },
+      // Module with all export types
+      {
+        type: 'esm',
+        path: './modules/all-exports.js',
+        content: `
+          // Named exports
+          export const namedValue = 'named';
+          export function namedFunction() { return 'named-function'; }
+          
+          // Default export
+          const defaultObj = { type: 'default', value: 42 };
+          export default defaultObj;
+          
+          // Re-exports
+          export { namedValue as aliasedValue };
+          export { default as defaultAlias } from './empty.js';
+          
+          // Star exports (namespace)
+          export * as utils from './utils.js';
+          
+          // Aggregate exports
+          export * from './side-effects.js';
+        `
+      },
+      // Utils module for re-exports
+      {
+        type: 'esm',
+        path: './modules/utils.js', 
+        content: `
+          export const utility1 = 'util1';
+          export const utility2 = 'util2';
+          export function utilFunction() {
+            return 'utility-function';
+          }
+        `
+      },
+      // Module testing all import types
+      {
+        type: 'esm',
+        path: './main.js',
+        content: `
+          // Import everything as namespace
+          import * as AllExports from './modules/all-exports.js';
+          
+          // Import specific named exports
+          import { namedValue, namedFunction, aliasedValue } from './modules/all-exports.js';
+          
+          // Import default
+          import defaultImport from './modules/all-exports.js';
+          
+          // Import with alias
+          import { namedValue as renamedValue } from './modules/all-exports.js';
+          
+          // Side effect import (no bindings)
+          import './modules/side-effects.js';
+          
+          // Empty module import
+          import './modules/empty.js';
+          
+          // Mixed imports
+          import defaultMixed, { namedValue as mixedNamed, utils } from './modules/all-exports.js';
+          
+          window.testEdgeCases = function() {
+            const results = {
+              // Namespace import tests
+              namespaceHasNamed: AllExports.namedValue === 'named',
+              namespaceHasFunction: typeof AllExports.namedFunction === 'function',
+              namespaceHasDefault: AllExports.default.type === 'default',
+              namespaceHasUtils: typeof AllExports.utils === 'object',
+              
+              // Named import tests
+              namedValueCorrect: namedValue === 'named',
+              namedFunctionWorks: namedFunction() === 'named-function',
+              aliasedValueCorrect: aliasedValue === 'named',
+              renamedValueCorrect: renamedValue === 'named',
+              
+              // Default import tests
+              defaultImportCorrect: defaultImport.type === 'default' && defaultImport.value === 42,
+              
+              // Mixed import tests
+              mixedDefaultCorrect: defaultMixed.type === 'default',
+              mixedNamedCorrect: mixedNamed === 'named',
+              mixedUtilsCorrect: utils.utility1 === 'util1',
+              
+              // Re-export tests
+              utilsNamespaceWorks: utils.utility1 === 'util1' && utils.utility2 === 'util2',
+              utilsFunctionWorks: utils.utilFunction() === 'utility-function',
+              
+              // Side effect tests
+              sideEffectRan: window.sideEffectRan === true,
+              
+              // Empty module handling
+              emptyModuleHandled: true // If we get here, empty module didn't break anything
+            };
+            
+            console.log('Edge cases test results:', results);
+            return results;
+          };
+        `
+      }
+    ];
+
+    const html = generateTestHtml(scripts, {
+      title: 'Import/Export Edge Cases Test',
+      additionalBody: `
+        <script type="module-shim">
+          setTimeout(async () => {
+            try {
+              // Import the main module and call test function
+              await import('./main.js');
+              
+              const results = window.testEdgeCases();
+              window.edgeCasesResults = results;
+              window.edgeCasesTestComplete = true;
+            } catch (e) {
+              window.edgeCasesError = e.message;
+              window.edgeCasesTestComplete = true;
+            }
+          }, 1000);
+        </script>
+      `
+    });
+    const filePath = writeTestFile('edge-cases-test.html', html);
+    await page.goto(`file://${filePath}`);
+
+    await page.waitForFunction(() => window.edgeCasesTestComplete, { timeout: 10000 });
+
+    const error = await page.evaluate(() => window.edgeCasesError);
+    const results = await page.evaluate(() => window.edgeCasesResults);
+
+    if (error) {
+      throw new Error('Edge cases test failed: ' + error);
+    }
+
+    console.log('Edge cases test results:', results);
+
+    // Verify namespace imports
+    expect(results.namespaceHasNamed).toBe(true);
+    expect(results.namespaceHasFunction).toBe(true);
+    expect(results.namespaceHasDefault).toBe(true);
+    expect(results.namespaceHasUtils).toBe(true);
+
+    // Verify named imports and aliases
+    expect(results.namedValueCorrect).toBe(true);
+    expect(results.namedFunctionWorks).toBe(true);
+    expect(results.aliasedValueCorrect).toBe(true);
+    expect(results.renamedValueCorrect).toBe(true);
+
+    // Verify default imports
+    expect(results.defaultImportCorrect).toBe(true);
+
+    // Verify mixed imports
+    expect(results.mixedDefaultCorrect).toBe(true);
+    expect(results.mixedNamedCorrect).toBe(true);
+    expect(results.mixedUtilsCorrect).toBe(true);
+
+    // Verify re-exports and namespace exports
+    expect(results.utilsNamespaceWorks).toBe(true);
+    expect(results.utilsFunctionWorks).toBe(true);
+
+    // Verify side effects and empty modules
+    expect(results.sideEffectRan).toBe(true);
+    expect(results.emptyModuleHandled).toBe(true);
+  });
+
 });
