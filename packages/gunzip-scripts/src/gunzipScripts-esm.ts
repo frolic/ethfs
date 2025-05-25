@@ -25,7 +25,7 @@ interface ModuleInfo {
 function normalizePath(path: string): string {
   const parts = path.split('/');
   const normalized = [];
-  
+
   for (const part of parts) {
     if (part === '' || part === '.') {
       // Skip empty parts and current directory references
@@ -41,7 +41,7 @@ function normalizePath(path: string): string {
       normalized.push(part);
     }
   }
-  
+
   // Ensure we maintain the ./ prefix for relative paths
   if (path.startsWith('./') && normalized.length > 0) {
     return './' + normalized.join('/');
@@ -56,18 +56,18 @@ function normalizePath(path: string): string {
 function resolveRelativePath(relPath: string, parentPath: string): string {
   // Strip query parameters and fragments from the import path
   const cleanPath = relPath.split('?')[0].split('#')[0];
-  
+
   // Handle non-relative paths
   if (!cleanPath.startsWith('./') && !cleanPath.startsWith('../')) {
     return cleanPath;
   }
-  
+
   // Get parent directory
   const parentDir = parentPath.substring(0, parentPath.lastIndexOf('/')) || '.';
-  
+
   // Join the parent directory with the clean relative path
   const combinedPath = parentDir + '/' + cleanPath;
-  
+
   // Normalize the combined path to remove redundant segments
   return normalizePath(combinedPath);
 }
@@ -77,28 +77,28 @@ async function rewriteImports(content: string, modulePath: string, importMap: Re
   try {
     // Initialize es-module-lexer if needed
     await init;
-    
+
     // Parse the module to find imports
     const [imports] = parse(content, modulePath);
-    
+
     if (imports.length === 0) {
       return content;
     }
-    
+
     // Process imports from end to start to maintain correct indices
     let rewrittenContent = content;
     for (let i = imports.length - 1; i >= 0; i--) {
       const imp = imports[i];
       const importUrl = content.slice(imp.s, imp.e);
-      
+
       // Skip non-relative imports
       if (!importUrl.startsWith('./') && !importUrl.startsWith('../')) {
         continue;
       }
-      
+
       // Resolve relative import to absolute path
       const resolvedPath = resolveRelativePath(importUrl, modulePath);
-      
+
       // Check if we have this resolved path in our import map and rewrite to absolute specifier
       let finalUrl = importUrl; // Start with original
       for (const [key, value] of Object.entries(importMap)) {
@@ -108,13 +108,13 @@ async function rewriteImports(content: string, modulePath: string, importMap: Re
           break;
         }
       }
-      
+
       // Always rewrite relative imports to absolute specifiers
       if (finalUrl !== importUrl) {
         rewrittenContent = rewrittenContent.slice(0, imp.s) + finalUrl + rewrittenContent.slice(imp.e);
       }
     }
-    
+
     return rewrittenContent;
   } catch (error) {
     console.error('Failed to rewrite imports:', error);
@@ -181,7 +181,7 @@ const gunzipScripts = async () => {
     for (const moduleInfo of modules.filter(m => m.isESM)) {
       if (moduleInfo.path) {
         importMap.imports[moduleInfo.path] = 'placeholder';
-        
+
         // Also add version without ./ prefix for rewritten imports
         if (moduleInfo.path.startsWith('./')) {
           const withoutDot = moduleInfo.path.substring(2);
@@ -189,13 +189,13 @@ const gunzipScripts = async () => {
         }
       }
     }
-    
+
     // Second pass: rewrite imports and create blob URLs
     for (const moduleInfo of modules.filter(m => m.isESM)) {
       try {
         // Rewrite imports in the module content using the module's actual path
         const rewrittenContent = await rewriteImports(moduleInfo.content, moduleInfo.path || '', importMap.imports);
-        
+
         // Create blob URL with rewritten content
         const blob = new Blob([rewrittenContent], { type: 'application/javascript' });
         const blobUrl = URL.createObjectURL(blob);
@@ -203,7 +203,7 @@ const gunzipScripts = async () => {
         // Update import map with actual blob URL
         if (moduleInfo.path) {
           importMap.imports[moduleInfo.path] = blobUrl;
-          
+
           // Also update version without ./ prefix
           if (moduleInfo.path.startsWith('./')) {
             const withoutDot = moduleInfo.path.substring(2);
@@ -228,11 +228,11 @@ const gunzipScripts = async () => {
       const base64Data = ES_MODULE_SHIMS_GZIPPED.split(',')[1];
       const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
       const shimsCode = new TextDecoder().decode(gunzipSync(buffer));
-      
+
       const shimScript = document.createElement("script");
       shimScript.textContent = shimsCode;
       document.head.appendChild(shimScript);
-      
+
       // Wait for es-module-shims to be ready, then add import map
       const waitForShims = () => {
         if (window.importShim) {

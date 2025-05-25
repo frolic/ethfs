@@ -101,7 +101,7 @@ test.describe('gunzipScripts', () => {
   });
 
   test('mixed UMD and ESM scripts', async ({ page }) => {
-  
+
     const scripts: TestScript[] = [
       {
         type: 'umd',
@@ -193,18 +193,18 @@ test.describe('gunzipScripts', () => {
             try {
               const { Scene, PerspectiveCamera, WebGLRenderer, Mesh } = await import('three');
               const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
-              
+
               const scene = new Scene();
               const camera = new PerspectiveCamera();
               const renderer = new WebGLRenderer();
               const cube = new Mesh();
               const controls = new OrbitControls();
-              
+
               scene.add(cube);
               document.getElementById('container').appendChild(renderer.domElement);
               renderer.render(scene, camera);
               controls.update();
-              
+
               window.threeJsTestComplete = true;
             } catch (e) {
               window.threeJsTestError = e.message;
@@ -246,7 +246,7 @@ test.describe('gunzipScripts', () => {
     const filePath1 = writeTestFile('version-default-test.html', html1);
     await page.goto(`file://${filePath1}`);
     await page.waitForFunction(() => window.versionTest);
-    
+
     let result = await page.evaluate(() => window.versionTest);
     expect(result).toBe('works');
 
@@ -255,7 +255,7 @@ test.describe('gunzipScripts', () => {
     const filePath2 = writeTestFile('version-esm-test.html', html2);
     await page.goto(`file://${filePath2}`);
     await page.waitForFunction(() => window.versionTest);
-    
+
     result = await page.evaluate(() => window.versionTest);
     expect(result).toBe('works');
   });
@@ -301,17 +301,17 @@ test.describe('gunzipScripts', () => {
         content: `
           import { PI, multiply } from '../../utils/math.js';
           import divide from '../../utils/operations.js';
-          
+
           export class Circle {
             constructor(radius) { this.radius = radius; }
             area() { return multiply(PI, multiply(this.radius, this.radius)); }
             circumference() { return multiply(2, multiply(PI, this.radius)); }
           }
-          
+
           export function circleArea(radius) {
             return multiply(PI, multiply(radius, radius));
           }
-          
+
           export default Circle;
         `
       },
@@ -321,7 +321,7 @@ test.describe('gunzipScripts', () => {
         path: './geometry/shapes/rectangle.js',
         content: `
           import { multiply } from '../../utils/math.js';
-          
+
           export class Rectangle {
             constructor(width, height) {
               this.width = width;
@@ -329,7 +329,7 @@ test.describe('gunzipScripts', () => {
             }
             area() { return multiply(this.width, this.height); }
           }
-          
+
           export default Rectangle;
           export { Circle } from './circle.js';
         `
@@ -342,7 +342,7 @@ test.describe('gunzipScripts', () => {
           export { default as Circle, circleArea } from './shapes/circle.js';
           export { default as Rectangle } from './shapes/rectangle.js';
           export * from '../utils/math.js';
-          
+
           import DefaultConstants from '../utils/constants.js';
           export { DefaultConstants };
         `
@@ -354,7 +354,7 @@ test.describe('gunzipScripts', () => {
         content: `
           import { Circle, Rectangle, PI, add, minus, E, GOLDEN_RATIO, DefaultConstants } from './geometry/index.js';
           import divide, { power } from './utils/operations.js';
-          
+
           window.complexModuleTest = {
             circle: new Circle(5),
             rectangle: new Rectangle(4, 6),
@@ -362,7 +362,7 @@ test.describe('gunzipScripts', () => {
             operations: { add: add(2, 3), minus: minus(10, 4), divide: divide(12, 3), power: power(2, 3) },
             version: DefaultConstants.version
           };
-          
+
           window.complexModuleTestComplete = true;
         `
       }
@@ -404,7 +404,7 @@ test.describe('gunzipScripts', () => {
     // Test that methods work correctly
     const circleArea = await page.evaluate(() => window.complexModuleTest.circle.area());
     const rectangleArea = await page.evaluate(() => window.complexModuleTest.rectangle.area());
-    
+
     expect(circleArea).toBeCloseTo(78.5398, 3); // π * 5²
     expect(rectangleArea).toBe(24); // 4 * 6
   });
@@ -423,14 +423,14 @@ test.describe('gunzipScripts', () => {
           export default Circle2D;
         `
       },
-      // Second circle.js in shapes/3d/ 
+      // Second circle.js in shapes/3d/
       {
         type: 'esm',
         path: './shapes/3d/circle.js',
         content: `
           export class Circle3D {
-            constructor(radius, height) { 
-              this.radius = radius; 
+            constructor(radius, height) {
+              this.radius = radius;
               this.height = height;
               this.type = '3D';
             }
@@ -445,7 +445,7 @@ test.describe('gunzipScripts', () => {
         path: './shapes/2d/rectangle.js',
         content: `
           import { Circle2D } from './circle.js';  // Should resolve to 2d/circle.js
-          
+
           export class Rectangle2D {
             constructor(width, height) {
               this.width = width;
@@ -454,7 +454,7 @@ test.describe('gunzipScripts', () => {
             }
             area() { return this.width * this.height; }
           }
-          
+
           // Re-export from local circle.js
           export { Circle2D };
           export default Rectangle2D;
@@ -466,7 +466,7 @@ test.describe('gunzipScripts', () => {
         path: './shapes/3d/cylinder.js',
         content: `
           import { Circle3D } from './circle.js';  // Should resolve to 3d/circle.js
-          
+
           export class Cylinder {
             constructor(radius, height) {
               this.base = new Circle3D(radius, height);
@@ -474,7 +474,7 @@ test.describe('gunzipScripts', () => {
             }
             volume() { return this.base.volume(); }
           }
-          
+
           export { Circle3D };
           export default Cylinder;
         `
@@ -486,19 +486,19 @@ test.describe('gunzipScripts', () => {
         content: `
           import { Rectangle2D, Circle2D } from './shapes/2d/rectangle.js';
           import { Cylinder, Circle3D } from './shapes/3d/cylinder.js';
-          
+
           const circle2d = new Circle2D(5);
           const circle3d = new Circle3D(3, 4);
           const rect = new Rectangle2D(4, 6);
           const cylinder = new Cylinder(3, 4);
-          
+
           window.ambiguousFilenameTest = {
             circle2d: { type: circle2d.type, area: circle2d.area() },
             circle3d: { type: circle3d.type, volume: circle3d.volume() },
             rect: { type: rect.type, area: rect.area() },
             cylinder: { type: cylinder.type, volume: cylinder.volume() }
           };
-          
+
           window.ambiguousFilenameTestComplete = true;
         `
       }
@@ -538,7 +538,7 @@ test.describe('gunzipScripts', () => {
       expect(result.circle3d.type).toBe('3D');
       expect(result.rect.type).toBe('2D');
       expect(result.cylinder.type).toBe('3D');
-      
+
       expect(result.circle2d.area).toBeCloseTo(78.54, 1); // π * 5²
       expect(result.circle3d.volume).toBeCloseTo(113.1, 1); // π * 3² * 4
       expect(result.rect.area).toBe(24); // 4 * 6
@@ -556,14 +556,14 @@ test.describe('gunzipScripts', () => {
           export const deepValue = 'deep';
         `
       },
-      // Very deep nested file that tries extreme traversal  
+      // Very deep nested file that tries extreme traversal
       {
         type: 'esm',
         path: './very/very/very/very/very/very/very/very/very/very/very/very/deep/consumer.js',
         content: `
           // This should either resolve properly or fail gracefully
           import { deepValue } from '../../../../../../../../../../../deep/nested/very/deep/module.js';
-          
+
           window.extremeTraversalTest = {
             success: true,
             deepValue: deepValue
@@ -585,7 +585,7 @@ test.describe('gunzipScripts', () => {
         path: './normal/test.js',
         content: `
           import { rootValue } from '../root.js';
-          
+
           window.normalTraversalTest = {
             success: true,
             rootValue: rootValue
@@ -602,10 +602,10 @@ test.describe('gunzipScripts', () => {
             try {
               // Test normal traversal first
               await import('./normal/test.js');
-              
+
               // Test extreme traversal
               await import('./very/very/very/very/very/very/very/very/very/very/very/very/deep/consumer.js');
-              
+
               window.allTraversalTestsComplete = true;
             } catch (e) {
               window.traversalTestError = e.message;
@@ -674,16 +674,16 @@ test.describe('gunzipScripts', () => {
         path: './complex/nested/consumer.js',
         content: `
           // These should all normalize to proper paths:
-          
+
           // Simple redundant current directory (should resolve to ../../utils/math.js)
           import { add } from './././../../utils/math.js';
-          
+
           // Redundant up and current directory (should resolve to ../../components/button.js)
           import { Button } from '.././../components/button.js';
-          
+
           // Mixed redundant patterns (should resolve to ../../lib/helpers.js)
           import { helper } from '.././../lib/helpers.js';
-          
+
           window.pathNormalizationTest = {
             math: add(2, 3),
             button: Button,
@@ -701,7 +701,7 @@ test.describe('gunzipScripts', () => {
           // Test going up and down with redundancy
           import { add } from './../../.././utils/math.js';
           import { Button } from './../../../components/./button.js';
-          
+
           window.deepPathTest = {
             result: add(5, 7),
             component: Button
@@ -718,10 +718,10 @@ test.describe('gunzipScripts', () => {
             try {
               // Test the main normalization patterns
               await import('./complex/nested/consumer.js');
-              
-              // Test deep path normalization  
+
+              // Test deep path normalization
               await import('./deep/very/nested/module.js');
-              
+
               window.allPathTestsComplete = true;
             } catch (e) {
               window.pathTestError = e.message;
@@ -742,7 +742,7 @@ test.describe('gunzipScripts', () => {
     const deepResult = await page.evaluate(() => window.deepPathTest);
 
     expect(error).toBeUndefined();
-    
+
     // Verify main normalization test
     expect(mainResult).toEqual({
       math: 5,         // add(2, 3)
@@ -789,7 +789,7 @@ test.describe('gunzipScripts', () => {
           // Import with query parameters
           import { version, getData } from '../versioned/api.js?version=1&cache=false';
           import { config } from '../versioned/api.js?env=production';
-          
+
           window.queryParamsTest = {
             version: version,
             data: getData(),
@@ -798,7 +798,7 @@ test.describe('gunzipScripts', () => {
           };
         `
       },
-      // Module that imports with fragments  
+      // Module that imports with fragments
       {
         type: 'esm',
         path: './consumer/fragment-test.js',
@@ -806,7 +806,7 @@ test.describe('gunzipScripts', () => {
           // Import with fragments
           import { introduction, chapter1 } from '../docs/manual.js#introduction';
           import { chapter2, references } from '../docs/manual.js#advanced';
-          
+
           window.fragmentsTest = {
             intro: introduction,
             chapter1: chapter1,
@@ -824,7 +824,7 @@ test.describe('gunzipScripts', () => {
           // Import with both query params and fragments
           import { version } from '../versioned/api.js?debug=true#main';
           import { introduction } from '../docs/manual.js?lang=en#section1';
-          
+
           window.mixedTest = {
             version: version,
             intro: introduction,
@@ -842,13 +842,13 @@ test.describe('gunzipScripts', () => {
             try {
               // Test query parameters
               await import('./consumer/query-test.js');
-              
+
               // Test fragments
               await import('./consumer/fragment-test.js');
-              
+
               // Test mixed query params and fragments
               await import('./consumer/mixed-test.js');
-              
+
               window.allQueryFragmentTestsComplete = true;
             } catch (e) {
               window.queryFragmentTestError = e.message;
@@ -906,14 +906,14 @@ test.describe('gunzipScripts', () => {
         path: './circular/moduleA.js',
         content: `
           import { fromB, bValue } from './moduleB.js';
-          
+
           export const aValue = 'A-value';
           export const fromA = 'exported-from-A';
-          
+
           // Use B's exports
           export const combinedAB = aValue + '-' + bValue;
           export const messageFromB = fromB;
-          
+
           console.log('Module A loaded, bValue:', bValue);
         `
       },
@@ -923,19 +923,19 @@ test.describe('gunzipScripts', () => {
         path: './circular/moduleB.js',
         content: `
           import { fromA, aValue } from './moduleA.js';
-          
+
           export const bValue = 'B-value';
           export const fromB = 'exported-from-B';
-          
+
           // Use A's exports in functions (works better with circular deps)
           export function getCombinedBA() {
             return bValue + '-' + aValue;
           }
-          
+
           export function getMessageFromA() {
             return fromA;
           }
-          
+
           console.log('Module B loaded, aValue:', aValue);
         `
       },
@@ -946,9 +946,9 @@ test.describe('gunzipScripts', () => {
         content: `
           import { aValue, combinedAB, messageFromB } from './moduleA.js';
           import { bValue, getCombinedBA, getMessageFromA } from './moduleB.js';
-          
+
           export const cValue = 'C-value';
-          
+
           window.circularTestResult = {
             aValue: aValue,
             bValue: bValue,
@@ -959,7 +959,7 @@ test.describe('gunzipScripts', () => {
             cValue: cValue,
             success: true
           };
-          
+
           console.log('Module C loaded with circular deps resolved');
         `
       },
@@ -969,13 +969,13 @@ test.describe('gunzipScripts', () => {
         path: './complex/moduleD.js',
         content: `
           import { eFunc } from './moduleE.js';
-          
+
           export const dData = { type: 'D', value: 1 };
-          
+
           export function dFunc() {
             return 'D-' + eFunc();
           }
-          
+
           console.log('Module D loaded');
         `
       },
@@ -984,13 +984,13 @@ test.describe('gunzipScripts', () => {
         path: './complex/moduleE.js',
         content: `
           import { fFunc } from './moduleF.js';
-          
+
           export const eData = { type: 'E', value: 2 };
-          
+
           export function eFunc() {
             return 'E-' + fFunc();
           }
-          
+
           console.log('Module E loaded');
         `
       },
@@ -999,13 +999,13 @@ test.describe('gunzipScripts', () => {
         path: './complex/moduleF.js',
         content: `
           import { dData } from './moduleD.js';
-          
+
           export const fData = { type: 'F', value: 3 };
-          
+
           export function fFunc() {
             return 'F-' + dData.type;
           }
-          
+
           console.log('Module F loaded');
         `
       },
@@ -1017,7 +1017,7 @@ test.describe('gunzipScripts', () => {
           import { dFunc, dData } from './moduleD.js';
           import { eData } from './moduleE.js';
           import { fData } from './moduleF.js';
-          
+
           window.complexCircularResult = {
             chain: dFunc(), // Should be 'D-E-F-D'
             dData: dData,
@@ -1025,7 +1025,7 @@ test.describe('gunzipScripts', () => {
             fData: fData,
             success: true
           };
-          
+
           console.log('Complex circular consumer loaded');
         `
       }
@@ -1039,10 +1039,10 @@ test.describe('gunzipScripts', () => {
             try {
               // Test simple circular: A <-> B
               await import('./circular/moduleC.js');
-              
+
               // Test complex circular: D -> E -> F -> D
               await import('./complex/consumer.js');
-              
+
               window.allCircularTestsComplete = true;
             } catch (e) {
               window.circularTestError = e.message;
@@ -1107,7 +1107,7 @@ test.describe('gunzipScripts', () => {
 
     <!-- Malformed gzipped data -->
     <script type="text/javascript+gzip" src="${createInvalidGzipDataUri()}"></script>
-    
+
     <!-- Malformed base64 -->
     <script type="text/javascript+gzip" src="data:application/gzip;base64,NotValidBase64!!!"></script>
 
@@ -1117,12 +1117,12 @@ test.describe('gunzipScripts', () => {
     <script>
       window.gzipErrors = [];
       window.originalConsoleError = console.error;
-      
+
       console.error = function(...args) {
         window.gzipErrors.push(args.join(' '));
         window.originalConsoleError.apply(console, args);
       };
-      
+
       setTimeout(() => {
         window.gzipTestComplete = true;
         window.gzipTestPassed = true; // If we get here, it didn't crash
@@ -1138,7 +1138,7 @@ test.describe('gunzipScripts', () => {
 
     const passed = await page.evaluate(() => window.gzipTestPassed);
     const errors = await page.evaluate(() => window.gzipErrors);
-    
+
     console.log('Malformed gzip errors:', errors);
 
     // Should not crash and should log errors
@@ -1174,7 +1174,7 @@ test.describe('gunzipScripts', () => {
       additionalBody: `
         <script type="module-shim">
           window.syntaxResults = {};
-          
+
           setTimeout(async () => {
             // Test valid module first
             try {
@@ -1183,7 +1183,7 @@ test.describe('gunzipScripts', () => {
             } catch (e) {
               window.syntaxResults.valid = { success: false, error: e.message };
             }
-            
+
             // Test invalid syntax module
             try {
               const broken = await import('./broken/syntax-error.js');
@@ -1191,7 +1191,7 @@ test.describe('gunzipScripts', () => {
             } catch (e) {
               window.syntaxResults.broken = { success: false, error: e.message };
             }
-            
+
             window.syntaxTestComplete = true;
           }, 1000);
         </script>
@@ -1238,7 +1238,7 @@ test.describe('gunzipScripts', () => {
       additionalBody: `
         <script type="module-shim">
           window.importResults = {};
-          
+
           setTimeout(async () => {
             // Test valid module
             try {
@@ -1247,7 +1247,7 @@ test.describe('gunzipScripts', () => {
             } catch (e) {
               window.importResults.valid = { success: false, error: e.message };
             }
-            
+
             // Test missing import
             try {
               const broken = await import('./broken/missing-import.js');
@@ -1255,7 +1255,7 @@ test.describe('gunzipScripts', () => {
             } catch (e) {
               window.importResults.missing = { success: false, error: e.message };
             }
-            
+
             window.importTestComplete = true;
           }, 1000);
         </script>
@@ -1289,7 +1289,7 @@ test.describe('gunzipScripts', () => {
 
     <!-- ESM script without data-path attribute -->
     <script type="text/javascript+gzip;module" src="data:application/gzip;base64,H4sIAAAAAAAAA8tIzcnJT1VsTS1OLapMLcnPZ2BgYGRgZGFkYWRhZGFkYQQAAP//FwwKqAAAAA=="></script>
-    
+
     <!-- Valid UMD script for comparison -->
     <script type="text/javascript+gzip" src="data:application/gzip;base64,H4sIAAAAAAAAA0tMTIvLTUwuykvMTVWIzUlVyCklVDyRkqSQWpKrkJKLGDAA/QcAAA=="></script>
 
@@ -1299,12 +1299,12 @@ test.describe('gunzipScripts', () => {
     <script>
       window.dataPathErrors = [];
       window.originalConsoleError = console.error;
-      
+
       console.error = function(...args) {
         window.dataPathErrors.push(args.join(' '));
         window.originalConsoleError.apply(console, args);
       };
-      
+
       setTimeout(() => {
         window.dataPathTestComplete = true;
         window.dataPathTestPassed = true;
@@ -1323,7 +1323,7 @@ test.describe('gunzipScripts', () => {
 
     // Should not crash even with missing data-path
     expect(passed).toBe(true);
-    
+
     // May or may not log errors depending on implementation
     console.log('Missing data-path handling:', errors.length > 0 ? 'logged errors' : 'handled silently');
   });
@@ -1370,7 +1370,7 @@ test.describe('gunzipScripts', () => {
               return { success: false, error: e.message };
             }
           }
-          
+
           // Test 2: Dynamic import with .then()
           function testPromiseImport() {
             return import('../dynamic/loadable.js')
@@ -1384,7 +1384,7 @@ test.describe('gunzipScripts', () => {
                 error: e.message
               }));
           }
-          
+
           // Test 3: Conditional dynamic import
           async function testConditionalImport(shouldLoad) {
             if (shouldLoad) {
@@ -1401,7 +1401,7 @@ test.describe('gunzipScripts', () => {
             }
             return { success: true, skipped: true };
           }
-          
+
           // Export test functions
           export { testAwaitImport, testPromiseImport, testConditionalImport };
         `
@@ -1415,9 +1415,9 @@ test.describe('gunzipScripts', () => {
           setTimeout(async () => {
             try {
               // Import the test module
-              const { testAwaitImport, testPromiseImport, testConditionalImport } = 
+              const { testAwaitImport, testPromiseImport, testConditionalImport } =
                 await import('./consumer/dynamic-consumer.js');
-              
+
               // Run all dynamic import tests
               const results = {
                 awaitImport: await testAwaitImport(),
@@ -1425,10 +1425,10 @@ test.describe('gunzipScripts', () => {
                 conditionalImport: await testConditionalImport(true),
                 skippedImport: await testConditionalImport(false)
               };
-              
+
               window.dynamicImportResults = results;
               window.dynamicImportTestComplete = true;
-              
+
             } catch (e) {
               window.dynamicImportError = e.message;
               window.dynamicImportTestComplete = true;
@@ -1447,13 +1447,13 @@ test.describe('gunzipScripts', () => {
     const results = await page.evaluate(() => window.dynamicImportResults);
 
     console.log('Dynamic imports work! Results:', results);
-    
+
     // Dynamic imports don't work with blob URLs - es-module-shims can't resolve relative paths
     // when the base URL is a blob: scheme. This is expected behavior.
     expect(results.awaitImport.success).toBe(false);
     expect(results.awaitImport.error).toContain('Invalid relative url or base scheme isn\'t hierarchical');
 
-    expect(results.promiseImport.success).toBe(false);  
+    expect(results.promiseImport.success).toBe(false);
     expect(results.promiseImport.error).toContain('Invalid relative url or base scheme isn\'t hierarchical');
 
     expect(results.conditionalImport.success).toBe(false);
@@ -1474,7 +1474,7 @@ test.describe('gunzipScripts', () => {
     const orbitControlsPath = path.resolve('./node_modules/three/examples/jsm/controls/OrbitControls.js');
 
     let threeJs, threeCore, orbitControls;
-    
+
     try {
       threeJs = fs.readFileSync(threeJsPath, 'utf8');
       console.log('Read three.module.js:', threeJs.length, 'chars');
@@ -1540,10 +1540,10 @@ test.describe('gunzipScripts', () => {
         <script type="module-shim">
           import * as THREE from 'three';
           import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-          
+
           console.log('🚀 Starting actual Three.js test with static imports...');
           document.getElementById('status').textContent = 'Loading Three.js...';
-          
+
           // Wait for gunzipScripts to be ready before proceeding
           const startTest = () => {
             if (window.gunzipScriptsReady) {
@@ -1557,42 +1557,42 @@ test.describe('gunzipScripts', () => {
               });
             }
           };
-          
+
           const runTest = () => {
             try {
               console.log('Three.js imported:', Object.keys(THREE).slice(0, 10).join(', '), '...');
               console.log('OrbitControls imported successfully');
-              
+
               document.getElementById('status').textContent = 'Creating scene...';
-              
+
               // Create a simple scene
               const scene = new THREE.Scene();
               const camera = new THREE.PerspectiveCamera(75, 400/300, 0.1, 1000);
               const renderer = new THREE.WebGLRenderer();
-              
+
               renderer.setSize(400, 300);
               document.getElementById('container').appendChild(renderer.domElement);
-              
+
               // Create a cube
               const geometry = new THREE.BoxGeometry();
               const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
               const cube = new THREE.Mesh(geometry, material);
               scene.add(cube);
-              
+
               // Create controls
               const controls = new OrbitControls(camera, renderer.domElement);
               controls.enableDamping = true;
-              
+
               camera.position.z = 5;
-              
+
               // Render once
               renderer.render(scene, camera);
               controls.update();
-              
+
               document.getElementById('status').textContent = 'Success! ✨';
               window.actualThreeJsTestComplete = true;
               console.log('✨ Actual Three.js test completed successfully!');
-              
+
             } catch (e) {
               console.log('❌ Actual Three.js test failed:', e.message);
               console.log('Error stack:', e.stack);
@@ -1601,7 +1601,7 @@ test.describe('gunzipScripts', () => {
               window.actualThreeJsTestComplete = true;
             }
           };
-          
+
           // Start the test
           startTest();
         </script>
@@ -1633,7 +1633,7 @@ test.describe('gunzipScripts', () => {
     } else {
       console.log('✅ Test passed - Three.js loaded successfully!');
       expect(status).toContain('Success!');
-      
+
       // Check that canvas was created
       const canvasExists = await page.evaluate(() => !!document.querySelector('#container canvas'));
       expect(canvasExists).toBe(true);
@@ -1653,7 +1653,7 @@ test.describe('gunzipScripts', () => {
       },
       // Module with only side effects
       {
-        type: 'esm', 
+        type: 'esm',
         path: './modules/side-effects.js',
         content: `
           console.log('Side effect executed');
@@ -1668,18 +1668,18 @@ test.describe('gunzipScripts', () => {
           // Named exports
           export const namedValue = 'named';
           export function namedFunction() { return 'named-function'; }
-          
+
           // Default export
           const defaultObj = { type: 'default', value: 42 };
           export default defaultObj;
-          
+
           // Re-exports
           export { namedValue as aliasedValue };
           export { default as defaultAlias } from './empty.js';
-          
+
           // Star exports (namespace)
           export * as utils from './utils.js';
-          
+
           // Aggregate exports
           export * from './side-effects.js';
         `
@@ -1687,7 +1687,7 @@ test.describe('gunzipScripts', () => {
       // Utils module for re-exports
       {
         type: 'esm',
-        path: './modules/utils.js', 
+        path: './modules/utils.js',
         content: `
           export const utility1 = 'util1';
           export const utility2 = 'util2';
@@ -1703,25 +1703,25 @@ test.describe('gunzipScripts', () => {
         content: `
           // Import everything as namespace
           import * as AllExports from './modules/all-exports.js';
-          
+
           // Import specific named exports
           import { namedValue, namedFunction, aliasedValue } from './modules/all-exports.js';
-          
+
           // Import default
           import defaultImport from './modules/all-exports.js';
-          
+
           // Import with alias
           import { namedValue as renamedValue } from './modules/all-exports.js';
-          
+
           // Side effect import (no bindings)
           import './modules/side-effects.js';
-          
+
           // Empty module import
           import './modules/empty.js';
-          
+
           // Mixed imports
           import defaultMixed, { namedValue as mixedNamed, utils } from './modules/all-exports.js';
-          
+
           window.testEdgeCases = function() {
             const results = {
               // Namespace import tests
@@ -1729,32 +1729,32 @@ test.describe('gunzipScripts', () => {
               namespaceHasFunction: typeof AllExports.namedFunction === 'function',
               namespaceHasDefault: AllExports.default.type === 'default',
               namespaceHasUtils: typeof AllExports.utils === 'object',
-              
+
               // Named import tests
               namedValueCorrect: namedValue === 'named',
               namedFunctionWorks: namedFunction() === 'named-function',
               aliasedValueCorrect: aliasedValue === 'named',
               renamedValueCorrect: renamedValue === 'named',
-              
+
               // Default import tests
               defaultImportCorrect: defaultImport.type === 'default' && defaultImport.value === 42,
-              
+
               // Mixed import tests
               mixedDefaultCorrect: defaultMixed.type === 'default',
               mixedNamedCorrect: mixedNamed === 'named',
               mixedUtilsCorrect: utils.utility1 === 'util1',
-              
+
               // Re-export tests
               utilsNamespaceWorks: utils.utility1 === 'util1' && utils.utility2 === 'util2',
               utilsFunctionWorks: utils.utilFunction() === 'utility-function',
-              
+
               // Side effect tests
               sideEffectRan: window.sideEffectRan === true,
-              
+
               // Empty module handling
               emptyModuleHandled: true // If we get here, empty module didn't break anything
             };
-            
+
             console.log('Edge cases test results:', results);
             return results;
           };
@@ -1770,7 +1770,7 @@ test.describe('gunzipScripts', () => {
             try {
               // Import the main module and call test function
               await import('./main.js');
-              
+
               const results = window.testEdgeCases();
               window.edgeCasesResults = results;
               window.edgeCasesTestComplete = true;
