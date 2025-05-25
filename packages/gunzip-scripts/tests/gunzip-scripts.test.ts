@@ -644,6 +644,120 @@ test.describe('gunzipScripts', () => {
     }
   });
 
+  test('path normalization with redundant segments', async ({ page }) => {
+    const scripts: TestScript[] = [
+      // Target modules that will be imported via normalized paths
+      {
+        type: 'esm',
+        path: './utils/math.js',
+        content: `
+          export const add = (a, b) => a + b;
+        `
+      },
+      {
+        type: 'esm',
+        path: './components/button.js',
+        content: `
+          export const Button = 'ButtonComponent';
+        `
+      },
+      {
+        type: 'esm',
+        path: './lib/helpers.js',
+        content: `
+          export const helper = 'HelperFunction';
+        `
+      },
+      // Module that uses various redundant path patterns
+      {
+        type: 'esm',
+        path: './complex/nested/consumer.js',
+        content: `
+          // These should all normalize to proper paths:
+          
+          // Simple redundant current directory (should resolve to ../../utils/math.js)
+          import { add } from './././../../utils/math.js';
+          
+          // Redundant up and current directory (should resolve to ../../components/button.js)
+          import { Button } from '.././../components/button.js';
+          
+          // Mixed redundant patterns (should resolve to ../../lib/helpers.js)
+          import { helper } from '.././../lib/helpers.js';
+          
+          window.pathNormalizationTest = {
+            math: add(2, 3),
+            button: Button,
+            helper: helper,
+            success: true
+          };
+          window.pathNormalizationComplete = true;
+        `
+      },
+      // Another test module with different redundant patterns
+      {
+        type: 'esm',
+        path: './deep/very/nested/module.js',
+        content: `
+          // Test going up and down with redundancy
+          import { add } from './../../.././utils/math.js';
+          import { Button } from './../../../components/./button.js';
+          
+          window.deepPathTest = {
+            result: add(5, 7),
+            component: Button
+          };
+        `
+      }
+    ];
+
+    const html = generateTestHtml(scripts, {
+      title: 'Path Normalization Test',
+      additionalBody: `
+        <script type="module-shim">
+          setTimeout(async () => {
+            try {
+              // Test the main normalization patterns
+              await import('./complex/nested/consumer.js');
+              
+              // Test deep path normalization  
+              await import('./deep/very/nested/module.js');
+              
+              window.allPathTestsComplete = true;
+            } catch (e) {
+              window.pathTestError = e.message;
+              window.allPathTestsComplete = true;
+            }
+          }, 1000);
+        </script>
+      `
+    });
+
+    const filePath = writeTestFile('path-normalization-test.html', html);
+    await page.goto(`file://${filePath}`);
+
+    await page.waitForFunction(() => window.allPathTestsComplete, { timeout: 10000 });
+
+    const error = await page.evaluate(() => window.pathTestError);
+    const mainResult = await page.evaluate(() => window.pathNormalizationTest);
+    const deepResult = await page.evaluate(() => window.deepPathTest);
+
+    expect(error).toBeUndefined();
+    
+    // Verify main normalization test
+    expect(mainResult).toEqual({
+      math: 5,         // add(2, 3)
+      button: 'ButtonComponent',
+      helper: 'HelperFunction',
+      success: true
+    });
+
+    // Verify deep path test
+    expect(deepResult).toEqual({
+      result: 12,      // add(5, 7)
+      component: 'ButtonComponent'
+    });
+  });
+
   test('real Three.js with relative imports', async ({ page }) => {
     const fs = require('fs');
     const path = require('path');

@@ -21,6 +21,37 @@ interface ModuleInfo {
 }
 
 
+// Normalize path by removing redundant segments
+function normalizePath(path: string): string {
+  const parts = path.split('/');
+  const normalized = [];
+  
+  for (const part of parts) {
+    if (part === '' || part === '.') {
+      // Skip empty parts and current directory references
+      continue;
+    } else if (part === '..') {
+      // Go up one directory
+      if (normalized.length > 0 && normalized[normalized.length - 1] !== '..') {
+        normalized.pop();
+      } else {
+        normalized.push('..');
+      }
+    } else {
+      normalized.push(part);
+    }
+  }
+  
+  // Ensure we maintain the ./ prefix for relative paths
+  if (path.startsWith('./') && normalized.length > 0) {
+    return './' + normalized.join('/');
+  } else if (normalized.length === 0) {
+    return './';
+  } else {
+    return normalized.join('/');
+  }
+}
+
 // Resolve relative path imports
 function resolveRelativePath(relPath: string, parentPath: string): string {
   // Handle non-relative paths
@@ -31,27 +62,11 @@ function resolveRelativePath(relPath: string, parentPath: string): string {
   // Get parent directory
   const parentDir = parentPath.substring(0, parentPath.lastIndexOf('/')) || '.';
   
-  // Handle ./filename
-  if (relPath.startsWith('./')) {
-    return parentDir + '/' + relPath.slice(2);
-  }
+  // Join the parent directory with the relative path
+  const combinedPath = parentDir + '/' + relPath;
   
-  // Handle ../filename
-  if (relPath.startsWith('../')) {
-    const parentParts = parentDir === '.' ? [] : parentDir.split('/').filter(p => p && p !== '.');
-    const relParts = relPath.split('/');
-    
-    let i = 0;
-    while (relParts[i] === '..' && parentParts.length > 0) {
-      parentParts.pop();
-      i++;
-    }
-    
-    const resultParts = parentParts.concat(relParts.slice(i));
-    return resultParts.length > 0 ? './' + resultParts.join('/') : './';
-  }
-  
-  return relPath;
+  // Normalize the combined path to remove redundant segments
+  return normalizePath(combinedPath);
 }
 
 // Rewrite import statements in module content using es-module-lexer
