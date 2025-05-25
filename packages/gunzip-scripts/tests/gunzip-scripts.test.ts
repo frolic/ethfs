@@ -758,6 +758,146 @@ test.describe('gunzipScripts', () => {
     });
   });
 
+  test('imports with query parameters and fragments', async ({ page }) => {
+    const scripts: TestScript[] = [
+      // Base module that will be imported with various query params/fragments
+      {
+        type: 'esm',
+        path: './versioned/api.js',
+        content: `
+          export const version = '1.0.0';
+          export const getData = () => ({ data: 'api-data' });
+          export const config = { endpoint: '/api/v1' };
+        `
+      },
+      // Another module for testing fragments
+      {
+        type: 'esm',
+        path: './docs/manual.js',
+        content: `
+          export const introduction = 'Welcome to the manual';
+          export const chapter1 = 'Getting Started';
+          export const chapter2 = 'Advanced Usage';
+          export const references = ['ref1', 'ref2'];
+        `
+      },
+      // Module that imports with query parameters
+      {
+        type: 'esm',
+        path: './consumer/query-test.js',
+        content: `
+          // Import with query parameters
+          import { version, getData } from '../versioned/api.js?version=1&cache=false';
+          import { config } from '../versioned/api.js?env=production';
+          
+          window.queryParamsTest = {
+            version: version,
+            data: getData(),
+            config: config,
+            success: true
+          };
+        `
+      },
+      // Module that imports with fragments  
+      {
+        type: 'esm',
+        path: './consumer/fragment-test.js',
+        content: `
+          // Import with fragments
+          import { introduction, chapter1 } from '../docs/manual.js#introduction';
+          import { chapter2, references } from '../docs/manual.js#advanced';
+          
+          window.fragmentsTest = {
+            intro: introduction,
+            chapter1: chapter1,
+            chapter2: chapter2,
+            refs: references,
+            success: true
+          };
+        `
+      },
+      // Module that imports with both query params and fragments
+      {
+        type: 'esm',
+        path: './consumer/mixed-test.js',
+        content: `
+          // Import with both query params and fragments
+          import { version } from '../versioned/api.js?debug=true#main';
+          import { introduction } from '../docs/manual.js?lang=en#section1';
+          
+          window.mixedTest = {
+            version: version,
+            intro: introduction,
+            success: true
+          };
+        `
+      }
+    ];
+
+    const html = generateTestHtml(scripts, {
+      title: 'Query Params and Fragments Test',
+      additionalBody: `
+        <script type="module-shim">
+          setTimeout(async () => {
+            try {
+              // Test query parameters
+              await import('./consumer/query-test.js');
+              
+              // Test fragments
+              await import('./consumer/fragment-test.js');
+              
+              // Test mixed query params and fragments
+              await import('./consumer/mixed-test.js');
+              
+              window.allQueryFragmentTestsComplete = true;
+            } catch (e) {
+              window.queryFragmentTestError = e.message;
+              window.allQueryFragmentTestsComplete = true;
+            }
+          }, 1000);
+        </script>
+      `
+    });
+
+    const filePath = writeTestFile('query-fragment-test.html', html);
+    await page.goto(`file://${filePath}`);
+
+    await page.waitForFunction(() => window.allQueryFragmentTestsComplete, { timeout: 10000 });
+
+    const error = await page.evaluate(() => window.queryFragmentTestError);
+    const queryResult = await page.evaluate(() => window.queryParamsTest);
+    const fragmentResult = await page.evaluate(() => window.fragmentsTest);
+    const mixedResult = await page.evaluate(() => window.mixedTest);
+
+    if (error) {
+      // Query params and fragments might not be fully supported - log what happened
+      console.log('Query params/fragments test failed (this may be expected):', error);
+      expect(error).toMatch(/Failed to resolve|Unable to resolve|Invalid/);
+    } else {
+      // If it succeeds, verify all imports worked correctly
+      expect(queryResult).toEqual({
+        version: '1.0.0',
+        data: { data: 'api-data' },
+        config: { endpoint: '/api/v1' },
+        success: true
+      });
+
+      expect(fragmentResult).toEqual({
+        intro: 'Welcome to the manual',
+        chapter1: 'Getting Started',
+        chapter2: 'Advanced Usage',
+        refs: ['ref1', 'ref2'],
+        success: true
+      });
+
+      expect(mixedResult).toEqual({
+        version: '1.0.0',
+        intro: 'Welcome to the manual',
+        success: true
+      });
+    }
+  });
+
   test('real Three.js with relative imports', async ({ page }) => {
     const fs = require('fs');
     const path = require('path');

@@ -54,16 +54,19 @@ function normalizePath(path: string): string {
 
 // Resolve relative path imports
 function resolveRelativePath(relPath: string, parentPath: string): string {
+  // Strip query parameters and fragments from the import path
+  const cleanPath = relPath.split('?')[0].split('#')[0];
+  
   // Handle non-relative paths
-  if (!relPath.startsWith('./') && !relPath.startsWith('../')) {
-    return relPath;
+  if (!cleanPath.startsWith('./') && !cleanPath.startsWith('../')) {
+    return cleanPath;
   }
   
   // Get parent directory
   const parentDir = parentPath.substring(0, parentPath.lastIndexOf('/')) || '.';
   
-  // Join the parent directory with the relative path
-  const combinedPath = parentDir + '/' + relPath;
+  // Join the parent directory with the clean relative path
+  const combinedPath = parentDir + '/' + cleanPath;
   
   // Normalize the combined path to remove redundant segments
   return normalizePath(combinedPath);
