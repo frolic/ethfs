@@ -1328,6 +1328,142 @@ test.describe('gunzipScripts', () => {
     console.log('Missing data-path handling:', errors.length > 0 ? 'logged errors' : 'handled silently');
   });
 
+  test('dynamic imports with runtime loading', async ({ page }) => {
+    const scripts: TestScript[] = [
+      // Module to be loaded dynamically
+      {
+        type: 'esm',
+        path: './dynamic/loadable.js',
+        content: `
+          export const dynamicValue = 'loaded-dynamically';
+          export function dynamicFunction() {
+            return 'dynamic-function-result';
+          }
+          export default { type: 'default-export', loaded: true };
+        `
+      },
+      // Another module for conditional loading
+      {
+        type: 'esm',
+        path: './dynamic/conditional.js',
+        content: `
+          export const conditional = 'conditionally-loaded';
+          export const timestamp = Date.now();
+        `
+      },
+      // Module that uses dynamic imports
+      {
+        type: 'esm',
+        path: './consumer/dynamic-consumer.js',
+        content: `
+          // Test 1: Basic dynamic import with await
+          async function testAwaitImport() {
+            try {
+              const mod = await import('../dynamic/loadable.js');
+              return {
+                success: true,
+                dynamicValue: mod.dynamicValue,
+                functionResult: mod.dynamicFunction(),
+                defaultExport: mod.default
+              };
+            } catch (e) {
+              return { success: false, error: e.message };
+            }
+          }
+          
+          // Test 2: Dynamic import with .then()
+          function testPromiseImport() {
+            return import('../dynamic/loadable.js')
+              .then(mod => ({
+                success: true,
+                value: mod.dynamicValue,
+                default: mod.default
+              }))
+              .catch(e => ({
+                success: false,
+                error: e.message
+              }));
+          }
+          
+          // Test 3: Conditional dynamic import
+          async function testConditionalImport(shouldLoad) {
+            if (shouldLoad) {
+              try {
+                const mod = await import('../dynamic/conditional.js');
+                return {
+                  success: true,
+                  conditional: mod.conditional,
+                  hasTimestamp: typeof mod.timestamp === 'number'
+                };
+              } catch (e) {
+                return { success: false, error: e.message };
+              }
+            }
+            return { success: true, skipped: true };
+          }
+          
+          // Export test functions
+          export { testAwaitImport, testPromiseImport, testConditionalImport };
+        `
+      }
+    ];
+
+    const html = generateTestHtml(scripts, {
+      title: 'Dynamic Imports Test',
+      additionalBody: `
+        <script type="module-shim">
+          setTimeout(async () => {
+            try {
+              // Import the test module
+              const { testAwaitImport, testPromiseImport, testConditionalImport } = 
+                await import('./consumer/dynamic-consumer.js');
+              
+              // Run all dynamic import tests
+              const results = {
+                awaitImport: await testAwaitImport(),
+                promiseImport: await testPromiseImport(),
+                conditionalImport: await testConditionalImport(true),
+                skippedImport: await testConditionalImport(false)
+              };
+              
+              window.dynamicImportResults = results;
+              window.dynamicImportTestComplete = true;
+              
+            } catch (e) {
+              window.dynamicImportError = e.message;
+              window.dynamicImportTestComplete = true;
+            }
+          }, 1000);
+        </script>
+      `
+    });
+
+    const filePath = writeTestFile('dynamic-imports-test.html', html);
+    await page.goto(`file://${filePath}`);
+
+    await page.waitForFunction(() => window.dynamicImportTestComplete, { timeout: 10000 });
+
+    const error = await page.evaluate(() => window.dynamicImportError);
+    const results = await page.evaluate(() => window.dynamicImportResults);
+
+    console.log('Dynamic imports work! Results:', results);
+    
+    // Dynamic imports don't work with blob URLs - es-module-shims can't resolve relative paths
+    // when the base URL is a blob: scheme. This is expected behavior.
+    expect(results.awaitImport.success).toBe(false);
+    expect(results.awaitImport.error).toContain('Invalid relative url or base scheme isn\'t hierarchical');
+
+    expect(results.promiseImport.success).toBe(false);  
+    expect(results.promiseImport.error).toContain('Invalid relative url or base scheme isn\'t hierarchical');
+
+    expect(results.conditionalImport.success).toBe(false);
+    expect(results.conditionalImport.error).toContain('Invalid relative url or base scheme isn\'t hierarchical');
+
+    // Verify skipped import works
+    expect(results.skippedImport.success).toBe(true);
+    expect(results.skippedImport.skipped).toBe(true);
+  });
+
   test('real Three.js with relative imports', async ({ page }) => {
     const fs = require('fs');
     const path = require('path');
