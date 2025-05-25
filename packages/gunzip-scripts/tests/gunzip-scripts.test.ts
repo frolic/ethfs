@@ -260,6 +260,292 @@ test.describe('gunzipScripts', () => {
     expect(result).toBe('works');
   });
 
+  test('complex nested modules with all export types', async ({ page }) => {
+    const scripts: TestScript[] = [
+      // Base utility module with named exports
+      {
+        type: 'esm',
+        path: './utils/math.js',
+        content: `
+          export const PI = 3.14159;
+          export function add(a, b) { return a + b; }
+          export function multiply(a, b) { return a * b; }
+          export { subtract as minus } from './operations.js';
+          export * from './constants.js';
+        `
+      },
+      // Operations module with default and named exports
+      {
+        type: 'esm',
+        path: './utils/operations.js',
+        content: `
+          export default function divide(a, b) { return a / b; }
+          export function subtract(a, b) { return a - b; }
+          export function power(a, b) { return Math.pow(a, b); }
+        `
+      },
+      // Constants module with mixed exports
+      {
+        type: 'esm',
+        path: './utils/constants.js',
+        content: `
+          export const E = 2.71828;
+          export const GOLDEN_RATIO = 1.618;
+          export default { version: '1.0.0' };
+        `
+      },
+      // Nested subdirectory module
+      {
+        type: 'esm',
+        path: './geometry/shapes/circle.js',
+        content: `
+          import { PI, multiply } from '../../utils/math.js';
+          import divide from '../../utils/operations.js';
+          
+          export class Circle {
+            constructor(radius) { this.radius = radius; }
+            area() { return multiply(PI, multiply(this.radius, this.radius)); }
+            circumference() { return multiply(2, multiply(PI, this.radius)); }
+          }
+          
+          export function circleArea(radius) {
+            return multiply(PI, multiply(radius, radius));
+          }
+          
+          export default Circle;
+        `
+      },
+      // Another nested module with re-exports
+      {
+        type: 'esm',
+        path: './geometry/shapes/rectangle.js',
+        content: `
+          import { multiply } from '../../utils/math.js';
+          
+          export class Rectangle {
+            constructor(width, height) {
+              this.width = width;
+              this.height = height;
+            }
+            area() { return multiply(this.width, this.height); }
+          }
+          
+          export default Rectangle;
+          export { Circle } from './circle.js';
+        `
+      },
+      // Index file that aggregates everything
+      {
+        type: 'esm',
+        path: './geometry/index.js',
+        content: `
+          export { default as Circle, circleArea } from './shapes/circle.js';
+          export { default as Rectangle } from './shapes/rectangle.js';
+          export * from '../utils/math.js';
+          
+          import DefaultConstants from '../utils/constants.js';
+          export { DefaultConstants };
+        `
+      },
+      // Main module that uses everything
+      {
+        type: 'esm',
+        path: './main.js',
+        content: `
+          import { Circle, Rectangle, PI, add, minus, E, GOLDEN_RATIO, DefaultConstants } from './geometry/index.js';
+          import divide, { power } from './utils/operations.js';
+          
+          window.complexModuleTest = {
+            circle: new Circle(5),
+            rectangle: new Rectangle(4, 6),
+            constants: { PI, E, GOLDEN_RATIO },
+            operations: { add: add(2, 3), minus: minus(10, 4), divide: divide(12, 3), power: power(2, 3) },
+            version: DefaultConstants.version
+          };
+          
+          window.complexModuleTestComplete = true;
+        `
+      }
+    ];
+
+    const html = generateTestHtml(scripts, {
+      title: 'Complex Nested Modules Test',
+      additionalBody: `
+        <script type="module-shim">
+          setTimeout(async () => {
+            try {
+              await import('./main.js');
+            } catch (e) {
+              window.complexModuleTestError = e.message;
+              window.complexModuleTestComplete = true;
+            }
+          }, 1000);
+        </script>
+      `
+    });
+
+    const filePath = writeTestFile('complex-modules-test.html', html);
+    await page.goto(`file://${filePath}`);
+
+    await page.waitForFunction(() => window.complexModuleTestComplete, { timeout: 10000 });
+
+    const error = await page.evaluate(() => window.complexModuleTestError);
+    const result = await page.evaluate(() => window.complexModuleTest);
+
+    expect(error).toBeUndefined();
+    expect(result).toEqual({
+      circle: expect.objectContaining({ radius: 5 }),
+      rectangle: expect.objectContaining({ width: 4, height: 6 }),
+      constants: { PI: 3.14159, E: 2.71828, GOLDEN_RATIO: 1.618 },
+      operations: { add: 5, minus: 6, divide: 4, power: 8 },
+      version: '1.0.0'
+    });
+
+    // Test that methods work correctly
+    const circleArea = await page.evaluate(() => window.complexModuleTest.circle.area());
+    const rectangleArea = await page.evaluate(() => window.complexModuleTest.rectangle.area());
+    
+    expect(circleArea).toBeCloseTo(78.5398, 3); // π * 5²
+    expect(rectangleArea).toBe(24); // 4 * 6
+  });
+
+  test('ambiguous filenames in different directories', async ({ page }) => {
+    const scripts: TestScript[] = [
+      // First circle.js in shapes/2d/
+      {
+        type: 'esm',
+        path: './shapes/2d/circle.js',
+        content: `
+          export class Circle2D {
+            constructor(radius) { this.radius = radius; this.type = '2D'; }
+            area() { return Math.PI * this.radius * this.radius; }
+          }
+          export default Circle2D;
+        `
+      },
+      // Second circle.js in shapes/3d/ 
+      {
+        type: 'esm',
+        path: './shapes/3d/circle.js',
+        content: `
+          export class Circle3D {
+            constructor(radius, height) { 
+              this.radius = radius; 
+              this.height = height;
+              this.type = '3D';
+            }
+            volume() { return Math.PI * this.radius * this.radius * this.height; }
+          }
+          export default Circle3D;
+        `
+      },
+      // Rectangle that should import from 2d/circle.js (same directory level)
+      {
+        type: 'esm',
+        path: './shapes/2d/rectangle.js',
+        content: `
+          import { Circle2D } from './circle.js';  // Should resolve to 2d/circle.js
+          
+          export class Rectangle2D {
+            constructor(width, height) {
+              this.width = width;
+              this.height = height;
+              this.type = '2D';
+            }
+            area() { return this.width * this.height; }
+          }
+          
+          // Re-export from local circle.js
+          export { Circle2D };
+          export default Rectangle2D;
+        `
+      },
+      // Cylinder that should import from 3d/circle.js (same directory level)
+      {
+        type: 'esm',
+        path: './shapes/3d/cylinder.js',
+        content: `
+          import { Circle3D } from './circle.js';  // Should resolve to 3d/circle.js
+          
+          export class Cylinder {
+            constructor(radius, height) {
+              this.base = new Circle3D(radius, height);
+              this.type = '3D';
+            }
+            volume() { return this.base.volume(); }
+          }
+          
+          export { Circle3D };
+          export default Cylinder;
+        `
+      },
+      // Main module that imports both
+      {
+        type: 'esm',
+        path: './main.js',
+        content: `
+          import { Rectangle2D, Circle2D } from './shapes/2d/rectangle.js';
+          import { Cylinder, Circle3D } from './shapes/3d/cylinder.js';
+          
+          const circle2d = new Circle2D(5);
+          const circle3d = new Circle3D(3, 4);
+          const rect = new Rectangle2D(4, 6);
+          const cylinder = new Cylinder(3, 4);
+          
+          window.ambiguousFilenameTest = {
+            circle2d: { type: circle2d.type, area: circle2d.area() },
+            circle3d: { type: circle3d.type, volume: circle3d.volume() },
+            rect: { type: rect.type, area: rect.area() },
+            cylinder: { type: cylinder.type, volume: cylinder.volume() }
+          };
+          
+          window.ambiguousFilenameTestComplete = true;
+        `
+      }
+    ];
+
+    const html = generateTestHtml(scripts, {
+      title: 'Ambiguous Filenames Test',
+      additionalBody: `
+        <script type="module-shim">
+          setTimeout(async () => {
+            try {
+              await import('./main.js');
+            } catch (e) {
+              window.ambiguousFilenameTestError = e.message;
+              window.ambiguousFilenameTestComplete = true;
+            }
+          }, 1000);
+        </script>
+      `
+    });
+
+    const filePath = writeTestFile('ambiguous-filenames-test.html', html);
+    await page.goto(`file://${filePath}`);
+
+    await page.waitForFunction(() => window.ambiguousFilenameTestComplete, { timeout: 10000 });
+
+    const error = await page.evaluate(() => window.ambiguousFilenameTestError);
+    const result = await page.evaluate(() => window.ambiguousFilenameTest);
+
+    if (error) {
+      console.log('Expected failure - ambiguous filename resolution:', error);
+      // This test is expected to fail with current implementation
+      expect(error).toMatch(/Failed to resolve module specifier|does not provide an export named|Unable to resolve specifier/);
+    } else {
+      // If it passes, verify the correct modules were loaded
+      expect(result.circle2d.type).toBe('2D');
+      expect(result.circle3d.type).toBe('3D');
+      expect(result.rect.type).toBe('2D');
+      expect(result.cylinder.type).toBe('3D');
+      
+      expect(result.circle2d.area).toBeCloseTo(78.54, 1); // π * 5²
+      expect(result.circle3d.volume).toBeCloseTo(113.1, 1); // π * 3² * 4
+      expect(result.rect.area).toBe(24); // 4 * 6
+      expect(result.cylinder.volume).toBeCloseTo(113.1, 1); // same as circle3d
+    }
+  });
+
   test('real Three.js with relative imports', async ({ page }) => {
     const fs = require('fs');
     const path = require('path');

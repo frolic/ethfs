@@ -20,51 +20,48 @@ interface ModuleInfo {
   isESM: boolean;
 }
 
-// Simplified URL resolution function adapted from es-module-shims
-function resolveUrl(relUrl: string, parentUrl: string): string {
-  // Handle absolute URLs
-  if (relUrl.includes('://') || relUrl.startsWith('//')) {
-    return relUrl;
+
+// Resolve relative path imports
+function resolveRelativePath(relPath: string, parentPath: string): string {
+  // Handle non-relative paths
+  if (!relPath.startsWith('./') && !relPath.startsWith('../')) {
+    return relPath;
   }
   
-  // Handle relative URLs
-  const parentBase = parentUrl.split('/').slice(0, -1).join('/');
+  // Get parent directory
+  const parentDir = parentPath.substring(0, parentPath.lastIndexOf('/')) || '.';
   
-  if (relUrl.startsWith('./')) {
-    return parentBase + '/' + relUrl.slice(2);
+  // Handle ./filename
+  if (relPath.startsWith('./')) {
+    return parentDir + '/' + relPath.slice(2);
   }
   
-  if (relUrl.startsWith('../')) {
-    const segments = parentBase.split('/');
-    const relSegments = relUrl.split('/');
+  // Handle ../filename
+  if (relPath.startsWith('../')) {
+    const parentParts = parentDir === '.' ? [] : parentDir.split('/').filter(p => p && p !== '.');
+    const relParts = relPath.split('/');
     
     let i = 0;
-    while (relSegments[i] === '..' && segments.length > 0) {
-      segments.pop();
+    while (relParts[i] === '..' && parentParts.length > 0) {
+      parentParts.pop();
       i++;
     }
     
-    return segments.join('/') + '/' + relSegments.slice(i).join('/');
+    const resultParts = parentParts.concat(relParts.slice(i));
+    return resultParts.length > 0 ? './' + resultParts.join('/') : './';
   }
   
-  // Handle root-relative URLs
-  if (relUrl.startsWith('/')) {
-    const parentOrigin = parentUrl.split('/').slice(0, 3).join('/');
-    return parentOrigin + relUrl;
-  }
-  
-  // Default relative resolution
-  return parentBase + '/' + relUrl;
+  return relPath;
 }
 
 // Rewrite import statements in module content using es-module-lexer
-async function rewriteImports(content: string, moduleUrl: string, importMap: Record<string, string>): Promise<string> {
+async function rewriteImports(content: string, modulePath: string, importMap: Record<string, string>): Promise<string> {
   try {
     // Initialize es-module-lexer if needed
     await init;
     
     // Parse the module to find imports
-    const [imports] = parse(content, moduleUrl);
+    const [imports] = parse(content, modulePath);
     
     if (imports.length === 0) {
       return content;
@@ -81,19 +78,15 @@ async function rewriteImports(content: string, moduleUrl: string, importMap: Rec
         continue;
       }
       
-      // Resolve relative import to absolute
-      const resolvedUrl = resolveUrl(importUrl, moduleUrl);
+      // Resolve relative import to absolute path
+      const resolvedPath = resolveRelativePath(importUrl, modulePath);
       
-      // Check if we have this resolved URL in our import map and rewrite to absolute specifier
+      // Check if we have this resolved path in our import map and rewrite to absolute specifier
       let finalUrl = importUrl; // Start with original
       for (const [key, value] of Object.entries(importMap)) {
-        if (key === resolvedUrl || key === importUrl) {
-          // Rewrite to the absolute key that import map can resolve
-          if (key.startsWith('./')) {
-            finalUrl = key.substring(2); // "./three.core.js" -> "three.core.js"
-          } else {
-            finalUrl = key;
-          }
+        if (key === resolvedPath) {
+          // Found exact match - rewrite to version without ./
+          finalUrl = key.startsWith('./') ? key.substring(2) : key;
           break;
         }
       }
@@ -166,21 +159,15 @@ const gunzipScripts = async () => {
 
   // Now process all ESM modules with import rewriting
   if (modules.some(m => m.isESM)) {
-    // First pass: create basic import map entries
+    // First pass: create import map entries for each module
     for (const moduleInfo of modules.filter(m => m.isESM)) {
       if (moduleInfo.path) {
-        // We'll use the path as the key for now, update with blob URL later
         importMap.imports[moduleInfo.path] = 'placeholder';
         
-        // Add mapping for relative imports
-        if (!moduleInfo.path.startsWith('./') && !moduleInfo.path.startsWith('/')) {
-          importMap.imports['./' + moduleInfo.path] = 'placeholder';
-        }
-        
-        // For files like "./three.core.js", also map without the "./" prefix
+        // Also add version without ./ prefix for rewritten imports
         if (moduleInfo.path.startsWith('./')) {
-          const absolutePath = moduleInfo.path.substring(2);
-          importMap.imports[absolutePath] = 'placeholder'; // Add absolute version for rewritten imports
+          const withoutDot = moduleInfo.path.substring(2);
+          importMap.imports[withoutDot] = 'placeholder';
         }
       }
     }
@@ -188,12 +175,8 @@ const gunzipScripts = async () => {
     // Second pass: rewrite imports and create blob URLs
     for (const moduleInfo of modules.filter(m => m.isESM)) {
       try {
-        // Create a fake URL for this module to use as base for relative resolution
-        const moduleUrl = moduleInfo.path || `module-${Date.now()}`;
-        const fakeBaseUrl = `https://example.com/${moduleUrl}`;
-        
-        // Rewrite imports in the module content
-        const rewrittenContent = await rewriteImports(moduleInfo.content, fakeBaseUrl, importMap.imports);
+        // Rewrite imports in the module content using the module's actual path
+        const rewrittenContent = await rewriteImports(moduleInfo.content, moduleInfo.path || '', importMap.imports);
         
         // Create blob URL with rewritten content
         const blob = new Blob([rewrittenContent], { type: 'application/javascript' });
@@ -203,13 +186,10 @@ const gunzipScripts = async () => {
         if (moduleInfo.path) {
           importMap.imports[moduleInfo.path] = blobUrl;
           
-          if (!moduleInfo.path.startsWith('./') && !moduleInfo.path.startsWith('/')) {
-            importMap.imports['./' + moduleInfo.path] = blobUrl;
-          }
-          
+          // Also update version without ./ prefix
           if (moduleInfo.path.startsWith('./')) {
-            const absolutePath = moduleInfo.path.substring(2);
-            importMap.imports[absolutePath] = blobUrl; // Add absolute version for rewritten imports
+            const withoutDot = moduleInfo.path.substring(2);
+            importMap.imports[withoutDot] = blobUrl;
           }
         }
       } catch (error) {
