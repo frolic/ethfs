@@ -20,14 +20,14 @@ export function generateTestHtml(
   scripts: TestScript[],
   options: {
     title?: string;
-    gunzipVersion?: '0.0.1' | '0.0.2';
+    gunzipVersion?: 'default' | 'esm';
     additionalHead?: string;
     additionalBody?: string;
   } = {}
 ): string {
   const {
     title = 'Test gunzipScripts',
-    gunzipVersion = '0.0.2',
+    gunzipVersion = 'esm',
     additionalHead = '',
     additionalBody = ''
   } = options;
@@ -57,7 +57,7 @@ export function generateTestHtml(
     ${scriptTags}
 
     <!-- Load gunzipScripts -->
-    <script src="../../dist/gunzipScripts-${gunzipVersion}.js"></script>
+    <script src="../../dist/gunzipScripts${gunzipVersion === 'default' ? '' : '-' + gunzipVersion}.js"></script>
 
     ${additionalBody}
 </body>

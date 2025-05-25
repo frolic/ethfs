@@ -232,7 +232,7 @@ test.describe('gunzipScripts', () => {
     expect(canvasExists).toBe(true);
   });
 
-  test('version compatibility (0.0.1 vs 0.0.2)', async ({ page }) => {
+  test('version compatibility (default vs esm)', async ({ page }) => {
 
     const scripts: TestScript[] = [
       {
@@ -241,18 +241,18 @@ test.describe('gunzipScripts', () => {
       }
     ];
 
-    // Test v0.0.1
-    const html1 = generateTestHtml(scripts, { gunzipVersion: '0.0.1' });
-    const filePath1 = writeTestFile('version-001-test.html', html1);
+    // Test default version
+    const html1 = generateTestHtml(scripts, { gunzipVersion: 'default' });
+    const filePath1 = writeTestFile('version-default-test.html', html1);
     await page.goto(`file://${filePath1}`);
     await page.waitForFunction(() => window.versionTest);
     
     let result = await page.evaluate(() => window.versionTest);
     expect(result).toBe('works');
 
-    // Test v0.0.2
-    const html2 = generateTestHtml(scripts, { gunzipVersion: '0.0.2' });
-    const filePath2 = writeTestFile('version-002-test.html', html2);
+    // Test esm version
+    const html2 = generateTestHtml(scripts, { gunzipVersion: 'esm' });
+    const filePath2 = writeTestFile('version-esm-test.html', html2);
     await page.goto(`file://${filePath2}`);
     await page.waitForFunction(() => window.versionTest);
     
@@ -1112,7 +1112,7 @@ test.describe('gunzipScripts', () => {
     <script type="text/javascript+gzip" src="data:application/gzip;base64,NotValidBase64!!!"></script>
 
     <!-- Load gunzipScripts -->
-    <script src="../../dist/gunzipScripts-0.0.2.js"></script>
+    <script src="../../dist/gunzipScripts-esm.js"></script>
 
     <script>
       window.gzipErrors = [];
@@ -1294,7 +1294,7 @@ test.describe('gunzipScripts', () => {
     <script type="text/javascript+gzip" src="data:application/gzip;base64,H4sIAAAAAAAAA0tMTIvLTUwuykvMTVWIzUlVyCklVDyRkqSQWpKrkJKLGDAA/QcAAA=="></script>
 
     <!-- Load gunzipScripts -->
-    <script src="../../dist/gunzipScripts-0.0.2.js"></script>
+    <script src="../../dist/gunzipScripts-esm.js"></script>
 
     <script>
       window.dataPathErrors = [];

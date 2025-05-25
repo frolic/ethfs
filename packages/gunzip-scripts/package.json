@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.2",
   "scripts": {
-    "build": "node scripts/create-embedded-shims.js && esbuild src/gunzipScripts.ts --outfile=dist/gunzipScripts-0.0.1.js --bundle --minify && esbuild src/gunzipScripts-0.0.2.ts --outfile=dist/gunzipScripts-0.0.2.js --bundle --minify",
+    "build": "node scripts/create-embedded-shims.js && esbuild src/gunzipScripts.ts --outfile=dist/gunzipScripts.js --bundle --minify && esbuild src/gunzipScripts-esm.ts --outfile=dist/gunzipScripts-esm.js --bundle --minify",
     "serve": "python3 -m http.server 3000",
     "test": "CI=true playwright test",
     "test:ui": "playwright test --ui"
