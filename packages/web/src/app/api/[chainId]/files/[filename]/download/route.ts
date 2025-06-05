@@ -13,11 +13,12 @@ export async function GET(
 
   if (!file) return new Response(null, { status: 404 });
 
-  return new Response(file.contents, {
+  return new Response(null, {
+    status: 302,
     headers: {
-      "Content-Disposition": `attachment; filename=${encodeURIComponent(file.filename)}`,
-      ...(file.type ? { "Content-Type": file.type } : null),
-      ...(file.encoding ? { "Content-Encoding": file.encoding } : null),
+      Location: `data:${file.type}${
+        file.encoding === "base64" ? ";base64" : ""
+      },${file.contents}`,
     },
   });
 }
