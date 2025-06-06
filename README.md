@@ -30,6 +30,18 @@ The `FileStore` contract acts as a minimum viable registry, a global namespace o
 <table>
   <tbody>
     <tr>
+      <th colspan="2">Abstract</th>
+    </tr>
+    <tr>
+      <td>Abstract Mainnet</td>
+      <td><a href="https://abscan.org/address/0xFe1411d6864592549AdE050215482e4385dFa0FB
+      ">0xFe1411d6864592549AdE050215482e4385dFa0FB</a></td>
+    </tr>
+    <tr>
+      <td>Abstract Sepolia</td>
+      <td><a href="https://sepolia.abscan.org/address/0xFe1411d6864592549AdE050215482e4385dFa0FB">0xFe1411d6864592549AdE050215482e4385dFa0FB</a></td>
+    </tr>
+    <tr>
       <th colspan="2">Ethereum</th>
     </tr>
     <tr>

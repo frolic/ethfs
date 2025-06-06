@@ -34,7 +34,7 @@ export type DeployResult = {
 };
 
 export type VerifierConfig =
-  | { type: "etherscan"; apiKey: string }
+  | { type: "etherscan"; apiKey: string; url?: string }
   | { type: "blockscout"; url: string };
 
 export async function deploy(
@@ -98,6 +98,9 @@ export async function deploy(
     if (verifier.type === "etherscan") {
       verifierFlags.push(["--verifier", verifier.type]);
       verifierFlags.push(["--etherscan-api-key", verifier.apiKey]);
+      if (verifier.url) {
+        verifierFlags.push(["--verifier-url", verifier.url]);
+      }
     } else if (verifier.type === "blockscout") {
       verifierFlags.push(["--verifier", verifier.type]);
       verifierFlags.push(["--verifier-url", verifier.url]);
@@ -109,7 +112,6 @@ export async function deploy(
         ["verify-contract", fileStore, "src/FileStore.sol:FileStore"],
         ["--chain-id", `${chainId}`],
         ["--compiler-version", fileStoreBuild.metadata.compiler.version],
-        ["--evm-version", fileStoreBuild.metadata.settings.evmVersion],
         [
           "--num-of-optimizations",
           `${fileStoreBuild.metadata.settings.optimizer.runs}`,

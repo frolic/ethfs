@@ -1,4 +1,6 @@
 import {
+  abstract,
+  abstractTestnet,
   base,
   baseSepolia,
   Chain,
@@ -23,6 +25,19 @@ type SupportedChain = {
 };
 
 export const supportedChains = [
+  /* Abstract */
+  {
+    chain: abstract,
+    slug: "abstract",
+    group: "Abstract",
+    rpcUrl: process.env.NEXT_PUBLIC_RPC_HTTP_URL_2741!,
+  },
+  {
+    chain: abstractTestnet,
+    slug: "abstract-sepolia",
+    group: "Abstract",
+    rpcUrl: process.env.NEXT_PUBLIC_RPC_HTTP_URL_11124!,
+  },
   /* Ethereum */
   {
     chain: mainnet,
