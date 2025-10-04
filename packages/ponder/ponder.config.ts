@@ -15,11 +15,11 @@ export default createConfig({
       transport: http(process.env.RPC_HTTP_URL_11155111),
       pollingInterval: 12_000,
     },
-    holesky: {
-      chainId: 17000,
-      transport: http(process.env.RPC_HTTP_URL_17000),
-      pollingInterval: 12_000,
-    },
+    // holesky: {
+    //   chainId: 17000,
+    //   transport: http(process.env.RPC_HTTP_URL_17000),
+    //   pollingInterval: 12_000,
+    // },
     base: {
       chainId: 8453,
       transport: http(process.env.RPC_HTTP_URL_8453),
@@ -55,11 +55,11 @@ export default createConfig({
       transport: http(process.env.RPC_HTTP_URL_7777777),
       pollingInterval: 2_000,
     },
-    zoraSepolia: {
-      chainId: 999999999,
-      transport: http(process.env.RPC_HTTP_URL_999999999),
-      pollingInterval: 2_000,
-    },
+    // zoraSepolia: {
+    //   chainId: 999999999,
+    //   transport: http(process.env.RPC_HTTP_URL_999999999),
+    //   pollingInterval: 2_000,
+    // },
   },
   contracts: {
     FileStore: {
@@ -68,7 +68,7 @@ export default createConfig({
       network: {
         mainnet: { startBlock: 18898263 },
         sepolia: { startBlock: 4986686 },
-        holesky: { startBlock: 634049 },
+        // holesky: { startBlock: 634049 },
         base: { startBlock: 8575423 },
         baseSepolia: { startBlock: 4384018 },
         optimism: { startBlock: 114171031 },
@@ -76,7 +76,7 @@ export default createConfig({
         // shape: { startBlock: 8418974 },
         // shapeSepolia: { startBlock: 9823090 },
         zora: { startBlock: 9623739 },
-        zoraSepolia: { startBlock: 3930816 },
+        // zoraSepolia: { startBlock: 3930816 },
       },
     },
   },

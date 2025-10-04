@@ -36,21 +36,21 @@ export const supportedChains = [
     group: "Ethereum",
     rpcUrl: process.env.NEXT_PUBLIC_RPC_HTTP_URL_11155111!,
   },
-  {
-    chain: {
-      ...holesky,
-      // TODO: update viem to include this
-      blockExplorers: {
-        default: {
-          name: "Etherscan",
-          url: "https://holesky.etherscan.io",
-        },
-      },
-    },
-    slug: "holesky",
-    group: "Ethereum",
-    rpcUrl: process.env.NEXT_PUBLIC_RPC_HTTP_URL_17000!,
-  },
+  // {
+  //   chain: {
+  //     ...holesky,
+  //     // TODO: update viem to include this
+  //     blockExplorers: {
+  //       default: {
+  //         name: "Etherscan",
+  //         url: "https://holesky.etherscan.io",
+  //       },
+  //     },
+  //   },
+  //   slug: "holesky",
+  //   group: "Ethereum",
+  //   rpcUrl: process.env.NEXT_PUBLIC_RPC_HTTP_URL_17000!,
+  // },
   /* Base */
   {
     chain: base,
@@ -97,12 +97,12 @@ export const supportedChains = [
     group: "Zora",
     rpcUrl: process.env.NEXT_PUBLIC_RPC_HTTP_URL_7777777!,
   },
-  {
-    chain: zoraSepolia,
-    slug: "zora-sepolia",
-    group: "Zora",
-    rpcUrl: process.env.NEXT_PUBLIC_RPC_HTTP_URL_999999999!,
-  },
+  // {
+  //   chain: zoraSepolia,
+  //   slug: "zora-sepolia",
+  //   group: "Zora",
+  //   rpcUrl: process.env.NEXT_PUBLIC_RPC_HTTP_URL_999999999!,
+  // },
   /* Arbitrum */
   // {
   //   chain: arbitrum,

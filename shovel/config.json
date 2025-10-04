@@ -18,14 +18,6 @@
       "concurrency": 1
     },
     {
-      "name": "holesky",
-      "chain_id": 17000,
-      "url": "$RPC_HTTP_URL_17000",
-      "poll_duration": "12s",
-      "batch_size": 100,
-      "concurrency": 1
-    },
-    {
       "name": "base",
       "chain_id": 8453,
       "url": "$RPC_HTTP_URL_8453",
@@ -64,14 +56,6 @@
       "poll_duration": "2s",
       "batch_size": 100,
       "concurrency": 1
-    },
-    {
-      "name": "zora-sepolia",
-      "chain_id": 999999999,
-      "url": "$RPC_HTTP_URL_999999999",
-      "poll_duration": "2s",
-      "batch_size": 100,
-      "concurrency": 1
     }
   ],
   "integrations": [
@@ -81,13 +65,11 @@
       "sources": [
         { "name": "mainnet", "start": 18898263 },
         { "name": "sepolia", "start": 4986686 },
-        { "name": "holesky", "start": 634049 },
         { "name": "base", "start": 8575423 },
         { "name": "base-sepolia", "start": 4384018 },
         { "name": "optimism", "start": 114171031 },
         { "name": "optimism-sepolia", "start": 6069158 },
-        { "name": "zora", "start": 9623739 },
-        { "name": "zora-sepolia", "start": 3930816 }
+        { "name": "zora", "start": 9623739 }
       ],
       "table": {
         "name": "files_created",
