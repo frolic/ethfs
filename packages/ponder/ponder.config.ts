@@ -5,6 +5,16 @@ import { FileStoreAbi } from "./abis/FileStoreAbi";
 
 export default createConfig({
   networks: {
+    abstract: {
+      chainId: 2741,
+      transport: http(process.env.RPC_HTTP_URL_2741),
+      pollingInterval: 12_000,
+    },
+    abstractSepolia: {
+      chainId: 11124,
+      transport: http(process.env.RPC_HTTP_URL_11124),
+      pollingInterval: 12_000,
+    },
     mainnet: {
       chainId: 1,
       transport: http(process.env.RPC_HTTP_URL_1),
@@ -66,6 +76,8 @@ export default createConfig({
       address: "0xFe1411d6864592549AdE050215482e4385dFa0FB",
       abi: FileStoreAbi,
       network: {
+        abstract: { startBlock: 10966338 },
+        abstractSepolia: { startBlock: 10200227 },
         mainnet: { startBlock: 18898263 },
         sepolia: { startBlock: 4986686 },
         // holesky: { startBlock: 634049 },
