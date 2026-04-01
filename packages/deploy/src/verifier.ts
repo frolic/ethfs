@@ -3,7 +3,7 @@ import { z } from "zod";
 export const verifierEnvSchema = z.union([
   z.object({
     VERIFIER: z.literal("etherscan"),
-    VERIFIER_URL: z.undefined().optional(),
+    VERIFIER_URL: z.string().optional(),
     VERIFIER_API_KEY: z.string(),
   }),
   z.object({
