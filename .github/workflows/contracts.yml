@@ -39,9 +39,9 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
       - name: Install Foundry
-        uses: onbjerg/foundry-toolchain@v1
+        uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: v1.7.1
       - run: pnpm install
       - run: pnpm build
       - name: Outdated files detected, run `pnpm build` and commit them
@@ -78,8 +78,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: "pnpm"
       - name: Install Foundry
-        uses: onbjerg/foundry-toolchain@v1
+        uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: v1.7.1
       - run: pnpm install
       - run: pnpm test
