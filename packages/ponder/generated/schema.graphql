@@ -1,0 +1,97 @@
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
+scalar BigInt
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type Meta {
+  status: JSON
+}
+
+type Query {
+  file(chainId: Float!, filename: String!): file
+  files(where: fileFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): filePage!
+  _meta: Meta
+}
+
+type file {
+  chainId: Int!
+  createdAt: BigInt!
+  filename: String!
+  pointer: String!
+  size: BigInt!
+  metadata: String!
+}
+
+type filePage {
+  items: [file!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input fileFilter {
+  AND: [fileFilter]
+  OR: [fileFilter]
+  chainId: Int
+  chainId_not: Int
+  chainId_in: [Int]
+  chainId_not_in: [Int]
+  chainId_gt: Int
+  chainId_lt: Int
+  chainId_gte: Int
+  chainId_lte: Int
+  createdAt: BigInt
+  createdAt_not: BigInt
+  createdAt_in: [BigInt]
+  createdAt_not_in: [BigInt]
+  createdAt_gt: BigInt
+  createdAt_lt: BigInt
+  createdAt_gte: BigInt
+  createdAt_lte: BigInt
+  filename: String
+  filename_not: String
+  filename_in: [String]
+  filename_not_in: [String]
+  filename_contains: String
+  filename_not_contains: String
+  filename_starts_with: String
+  filename_ends_with: String
+  filename_not_starts_with: String
+  filename_not_ends_with: String
+  pointer: String
+  pointer_not: String
+  pointer_in: [String]
+  pointer_not_in: [String]
+  pointer_contains: String
+  pointer_not_contains: String
+  pointer_starts_with: String
+  pointer_ends_with: String
+  pointer_not_starts_with: String
+  pointer_not_ends_with: String
+  size: BigInt
+  size_not: BigInt
+  size_in: [BigInt]
+  size_not_in: [BigInt]
+  size_gt: BigInt
+  size_lt: BigInt
+  size_gte: BigInt
+  size_lte: BigInt
+  metadata: String
+  metadata_not: String
+  metadata_in: [String]
+  metadata_not_in: [String]
+  metadata_contains: String
+  metadata_not_contains: String
+  metadata_starts_with: String
+  metadata_ends_with: String
+  metadata_not_starts_with: String
+  metadata_not_ends_with: String
+}

@@ -3,6 +3,3 @@ procs:
   web:
     cwd: packages/web
     shell: pnpm run dev
-  ponder:
-    cwd: packages/ponder
-    shell: pnpm run dev
