@@ -33,9 +33,7 @@ export function FileExplorer() {
     queryKey: ["files", chain.id, searchQuery],
     queryFn: async () => {
       return fetch(
-        `${process.env.NEXT_PUBLIC_PONDER_URL}/api/${
-          chain.id
-        }/files?${new URLSearchParams({
+        `/api/${chain.id}/files?${new URLSearchParams({
           filename: searchQuery,
         })}`,
       ).then((res) => res.json() as Promise<OnchainFile[]>);

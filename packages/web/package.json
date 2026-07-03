@@ -11,8 +11,6 @@
   "dependencies": {
     "@ethfs/contracts": "workspace:*",
     "@ethfs/deploy": "workspace:*",
-    "@ethfs/ponder": "workspace:*",
-    "@ponder/client": "0.9.0-next.10",
     "@rainbow-me/rainbowkit": "^2.2.4",
     "@tanstack/react-query": "^5.66.9",
     "fflate": "^0.7.4",
