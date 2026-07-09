@@ -1,14 +1,22 @@
 {
   "name": "@ethfs/gunzip-scripts",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "scripts": {
-    "build": "esbuild src/gunzipScripts.ts --outfile=dist/gunzipScripts-$npm_package_version.js --bundle --minify"
+    "build": "node scripts/create-embedded-shims.js && esbuild src/gunzipScripts.ts --outfile=dist/gunzipScripts.js --bundle --minify && esbuild src/gunzipScripts-esm.ts --outfile=dist/gunzipScripts-esm.js --bundle --minify",
+    "serve": "python3 -m http.server 3000",
+    "test": "CI=true playwright test",
+    "test:ui": "playwright test --ui"
   },
   "dependencies": {
+    "es-module-lexer": "^1.7.0",
+    "es-module-shims": "^2.5.1",
     "fflate": "^0.7.4"
   },
   "devDependencies": {
-    "esbuild": "^0.15.13"
+    "@playwright/test": "^1.52.0",
+    "@types/node": "^22.15.21",
+    "esbuild": "^0.15.18",
+    "three": "^0.176.0"
   }
 }
